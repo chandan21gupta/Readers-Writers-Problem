@@ -3,6 +3,7 @@
 #include <pthread.h>
 #include <semaphore.h>
 #include <errno.h>
+#include <string.h>
 
 pthread_t readers[4];
 pthread_t writers[4];
@@ -14,7 +15,7 @@ sem_t mutex;
 sem_t writer_semaphore;
 
 void print_error(int err) {
-    printf("Error : ",strerror(err));
+    printf("Error : %s\n",strerror(err));
 }
 
 void *do_read(int *ptr) {
@@ -44,6 +45,7 @@ void *do_read(int *ptr) {
     }
     //pthread_mutex_unlock(&reader_lock);
     sem_post(&mutex);
+    return NULL;
 }
 
 void *do_write(int *ptr) {
@@ -57,6 +59,8 @@ void *do_write(int *ptr) {
     printf("writer %d finished with : %d\n",writer_number,counter);
     //pthread_mutex_unlock(&writer_lock);
     sem_post(&writer_semaphore);
+
+    return NULL;
 }
 
 int main() {
@@ -66,21 +70,26 @@ int main() {
 
     if((sem_init(&mutex,0,1)) < 0) {
         print_error(errno);
+        exit(1);
     }
 
     if((sem_init(&writer_semaphore,0,1)) < 0) {
         print_error(errno);
+        exit(1);
     }
 
     while(1){
 
             for(int i=0;i<4;i++) {
 
-            if((pthread_create(&readers[i],NULL,&do_read,&i)) != 0)
-                print_error(errno);
-            if((pthread_create(&writers[i],NULL,&do_write,&i)) != 0)
-                print_error(errno);
-
+            if((pthread_create(&readers[i],NULL,&do_read,&i)) != 0) {
+                    print_error(errno);
+                    exit(1);
+                }
+            if((pthread_create(&writers[i],NULL,&do_write,&i)) != 0) {
+                    print_error(errno);
+                    exit(1);
+                }
         }
 
         for(int i=0;i<4;i++) {
