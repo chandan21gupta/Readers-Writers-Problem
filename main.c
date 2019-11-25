@@ -2,9 +2,7 @@
 #include <stdlib.h>
 #include <pthread.h>
 #include <semaphore.h>
-
-pthread_mutex_t reader_lock;
-pthread_mutex_t writer_lock;
+#include <errno.h>
 
 pthread_t readers[4];
 pthread_t writers[4];
@@ -13,7 +11,11 @@ int current_readers = 0;
 int counter = 0;
 
 sem_t mutex;
-sem_t db;
+sem_t writer_semaphore;
+
+void print_error(int err) {
+    printf("Error : ",strerror(err));
+}
 
 void *do_read(int *ptr) {
 
@@ -23,7 +25,7 @@ void *do_read(int *ptr) {
     current_readers += 1;
     if(current_readers == 1) {
         //pthread_mutex_lock(&writer_lock);
-        sem_wait(&db);
+        sem_wait(&writer_semaphore);
     }
 
     //pthread_mutex_unlock(&reader_lock);
@@ -38,7 +40,7 @@ void *do_read(int *ptr) {
     current_readers--;
     if(current_readers == 0) {
         //pthread_mutex_unlock(&writer_lock);
-        sem_post(&db);
+        sem_post(&writer_semaphore);
     }
     //pthread_mutex_unlock(&reader_lock);
     sem_post(&mutex);
@@ -47,14 +49,14 @@ void *do_read(int *ptr) {
 void *do_write(int *ptr) {
 
     //pthread_mutex_lock(&writer_lock);
-    sem_wait(&db);
+    sem_wait(&writer_semaphore);
     int writer_number = *ptr;
     printf("writer %d started with : %d\n",writer_number,counter);
     counter++;
     for (unsigned long i = 0; i < (0xFFFFFFFF); i++);
     printf("writer %d finished with : %d\n",writer_number,counter);
     //pthread_mutex_unlock(&writer_lock);
-    sem_post(&db);
+    sem_post(&writer_semaphore);
 }
 
 int main() {
@@ -62,15 +64,22 @@ int main() {
     //pthread_mutex_init(&reader_lock,NULL);
     //pthread_mutex_init(&writer_lock,NULL);
 
-    sem_init(&mutex,0,1);
-    sem_init(&db,0,1);
+    if((sem_init(&mutex,0,1)) < 0) {
+        print_error(errno);
+    }
+
+    if((sem_init(&writer_semaphore,0,1)) < 0) {
+        print_error(errno);
+    }
 
     while(1){
 
             for(int i=0;i<4;i++) {
 
-            pthread_create(&readers[i],NULL,&do_read,&i);
-            pthread_create(&writers[i],NULL,&do_write,&i);
+            if((pthread_create(&readers[i],NULL,&do_read,&i)) != 0)
+                print_error(errno);
+            if((pthread_create(&writers[i],NULL,&do_write,&i)) != 0)
+                print_error(errno);
 
         }
 
