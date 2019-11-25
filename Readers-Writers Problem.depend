@@ -1,5 +1,5 @@
 # depslib dependency file v1.0
-1574702820 source:/home/chandan/Desktop/Readers-Writers Problem/main.c
+1574705366 source:/home/chandan/Desktop/Readers-Writers Problem/main.c
 	<stdio.h>
 	<stdlib.h>
 	<pthread.h>
